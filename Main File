@@ -47,8 +47,8 @@ for x in range(pageNum):
 
 
 
-pdf= PDF('L', 'pt', (pages[1][2], pages[1][3]))
-'''fpdf = FPDF('L', 'pt', (int(box1[2]), int(box1[3])))'''
+
+fpdf = FPDF('L', 'pt', (int(box1[2]), int(box1[3])))
 
 for x in range(pageNum):
     print(pages[x])
