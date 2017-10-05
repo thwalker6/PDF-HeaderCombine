@@ -2,7 +2,7 @@ from fpdf import FPDF
 from PyPDF2 import PdfFileReader
 import PyPDF2
 
-class PDF('L', 'pt', (int(box1[2]), int(box1[3]))):
+class PDF(FPDF):
     def header(self):
         # Select Arial bold 15
         self.set_font('Arial', '', 8)
