@@ -48,7 +48,7 @@ for x in range(pageNum):
 
 
 
-fpdf = FPDF('L', 'pt', (int(box1[2]), int(box1[3])))
+fpdf = FPDF('L', 'pt', (pages[0]['x'], pages[0]['y']))
 
 for x in range(pageNum):
     print(pages[x])
