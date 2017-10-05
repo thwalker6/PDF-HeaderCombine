@@ -1,0 +1,79 @@
+from fpdf import FPDF
+from PyPDF2 import PdfFileReader
+import PyPDF2
+
+class PDF('L', 'pt', (int(box1[2]), int(box1[3]))):
+    def header(self):
+        # Select Arial bold 15
+        self.set_font('Arial', '', 8)
+        print("HERRO")
+        # Move to the right
+        self.cell(165)
+        # Framed title
+        self.cell(0, 10, 'Exhibit 8', 0, 0, 'L')
+        self.ln(3)
+        self.cell(165)
+        if pgCount > 1:
+            self.cell(0, 10, 'Sheet %s' %self.page_no()  , 0, 1, 'L')
+        # Line break
+        self.ln(2.5)
+        
+        
+    
+    
+page_dimensions = {}
+pages=[]
+
+exPDF = 'C:\\Users\\u41007\\Desktop\\python\\exhibit 1.pdf'
+oPDF = 'C:\\Users\\u41007\\Desktop\\python\\overlay2.pdf'
+
+
+input1 = PdfFileReader(open(exPDF, 'rb'))
+pageNum = input1.numPages
+
+for x in range(pageNum):
+    box1=(input1.getPage(x).mediaBox)
+    
+    if box1[2] >= box1[3]:
+        x_co= int(box1[2])
+        y_co = int(box1[3])
+        ori = 'P'
+    else:
+        x_co = int(box1[3])
+        y_co = int(box1[2])
+        ori= 'L'
+    page_dimensions = {'page':x, 'x': x_co, 'y': y_co, 'o': ori}
+    pages.append(page_dimensions)
+
+
+
+pdf= PDF('L', 'pt', (pages[1][2], pages[1][3]))
+'''fpdf = FPDF('L', 'pt', (int(box1[2]), int(box1[3])))'''
+
+for x in range(pageNum):
+    print(pages[x])
+    fpdf.add_page(orientation=pages[x]['o'], format=(pages[x]['x'], pages[x]['y']), same = False)
+  
+fpdf.output(oPDF, 'F')
+
+'''Merge the pages '''
+
+pdfFirst = input1.getPage(0)
+headers = PyPDF2.PdfFileReader(open(oPDF, 'rb'))
+
+
+
+pdfFirst.mergePage(headers.getPage(0))
+pdfWriter = PyPDF2.PdfFileWriter()
+
+pdfWriter.addPage(pdfFirst)
+for pageNum in range(1, input1.numPages):
+    pageObj = input1.getPage(pageNum)
+    pdfWriter.addPage(pageObj)
+
+resultPdfFile = open('C:\\Users\\u41007\\Desktop\\python\\PDFWithHeaders.pdf', 'wb')
+pdfWriter.write(resultPdfFile)
+resultPdfFile.close()
+
+pdfWriter = PyPDF2.PdfFileWriter()
+pdfWriter.addPage(pdfFirst)
