@@ -1,0 +1,235 @@
+from tkinter import *
+from tkinter.filedialog import askopenfilename, askopenfilenames
+from tkinter import filedialog
+from tkinter import messagebox
+from findPDF import Run_This, page_traits
+
+class Window(Frame):
+    
+    def __init__(self, master = None):
+        Frame.__init__(self, master)
+        self.master = master
+        self.init_window()
+    
+    def init_window(self):
+
+        #title
+        self.master.title("CAU Package Maker")
+        self.pack(fill=BOTH, expand=1)
+
+        # creating a menu instance
+        menu = Menu(self.master)
+        self.master.config(menu=menu)
+
+        # create the file object)
+        file = Menu(menu)
+        menu.add_cascade(label="File", menu=file)
+        file.add_command(label="About", command= Window.about_Maker)
+        file.add_command(label="Exit", command=self.client_exit)
+
+    def about_Maker():
+        #about the tool
+        messagebox.showinfo("About", "Made by me for me.")
+    
+    def select_file():
+        #select the PDFS you want
+        
+        filename = askopenfilenames(title = "Select File", filetypes = [("PDF files", ".pdf")])
+        if filename != '':
+            for x in filename:
+                if x[-4:]== '.pdf':
+                    fileList.append(x)
+            #checks to see if the file is a pdf
+
+                #update the label
+     
+            #w.config(text = fileString(fileList))
+            Window.list_repop(fileList)
+        filename = ''    
+    def reorder(fileList):
+        orderList =[]
+        del orderList[:]
+        #a really stupid and convulated way to auto order
+        for x in range(len(fileList)):
+            if 'memo' in fileList[x].lower():
+                orderList.append(0)
+            elif 'toc' in fileList[x].lower():
+                orderList.append(1)
+            elif x == 0:
+                orderList.append(2)
+            elif x ==1:
+                if orderList[0] ==2:
+                    orderList.append(3)
+            else:
+                orderList.append(x)
+
+        return fileList
+        
+    def list_repop(fileList):
+        for x in fileList:
+            w.insert(END, page_traits.get_title(x))
+            
+    def select_dest(self):
+        #gets destination to save files
+        destination = filedialog.askdirectory(title ="Select file")
+        
+    def clear_list():
+        #clears out all files on the list to print
+        del fileList[:]
+        w.delete(0,END)
+        
+    def clear_item():
+
+        sel = w.curselection()
+        
+        for x in sel[::-1]:
+            del fileList[x]
+        
+        w.delete(0,END)
+        Window.list_repop(fileList)
+            
+            
+    def client_exit(self):
+        exit()
+    
+    def fileString(fileList):
+        arr = "The follwing items have been selected in the package: \n"
+        if len(fileList) > 0:
+            #Rerieves all the Exhibit Names from the file path and adss them to a string
+            for x in fileList:
+                arr = arr + "  -  " + page_traits.get_title(x) +'\n'
+        else:
+            return ''
+        return arr
+            
+    def select_dest():
+        destination = filedialog.askdirectory(title ="Select Save Location")
+        return destination
+        
+    def print_list():
+        #Combines the PDFS with a popup
+        arr = Window.fileString(fileList)
+        
+        #pull package name
+        packageName = Window.package_name(fileNameBox)
+        
+        #Check to see if any files are selected
+        if len(fileList) > 0:
+            arr = arr + 'OK to print?'
+            result = messagebox.askquestion("Exhibits selected", arr, icon = 'warning')
+            if result == 'yes':
+                #select where to save
+                destination = Window.select_dest()
+                #run program
+
+                a = Run_This(fileList, destination, packageName)
+                a.run_prog()
+                messagebox.showinfo("Finished", "File is done")
+            else:
+                messagebox.showinfo("Not run", "Please make the changes you need")
+        else:
+            messagebox.showinfo("No files selected", "Please select files")
+            
+    def package_name(fileNameBox):
+        #Check to see if they named their package
+        packageName= fileNameBox.get()
+        if packageName == defaultText:
+            package_name = "CAU Package"
+        
+        return packageName
+        
+    def clear_Text(event):
+        event.widget.delete(0, "end")
+        return None
+
+
+    def move_item(UpDown):
+        '''move item up or down on the list
+        this is updating the list not the selection box '''
+        try:
+            pos = w.curselection()
+            if len(pos) >1:
+                messagebox.showinfo("Too many selections", "Please only select one item")
+                return
+            else:
+
+                if pos[0] ==0 and UpDown == -1:
+                    w.selection_set(pos[0])
+                    return
+                elif pos[0] ==len(fileList)-1 and UpDown == 1:
+                    w.selection_set(pos[0])
+                    return
+                    
+                text =fileList[pos[0]]
+                
+                del fileList[pos[0]]
+                fileList.insert(pos[0]+UpDown, text)
+                w.delete(0,END)
+             
+                Window.list_repop(fileList)
+
+                w.activate(pos[0]+UpDown)
+                w.selection_set(pos[0]+UpDown)
+
+        except:
+            messagebox.showinfo("Nothing Selected", "Nothing has been selected")
+            
+
+    def move_Item_Up():
+        Window.move_item(-1)
+            
+    def move_Item_Down():
+        Window.move_item(1)
+        
+
+root = Tk()
+root.geometry("700x650")
+
+#var = StringVar()
+
+app = Window(root)
+
+
+#make buttons
+selectButton = Button(root, text = "Select File(s)", command = Window.select_file)
+clearLastButton = Button(root, text = "Remove Selected File(s)", command = Window.clear_item)
+clearAllButton = Button(root, text="Start over", command = Window.clear_list)
+
+
+
+upButton = Button(root, font=("Wingdings 3", 10),text = "p", command = Window.move_Item_Up)
+DownButton = Button(root, font=("Wingdings 3", 10), text = "q", command = Window.move_Item_Down)
+
+printButton = Button(root, text="Combine PDF's", command = Window.print_list)
+defaultText = "Insert File Name Here"
+
+fileNameBox = Entry(root, width = 40)
+fileNameBox.insert(0, defaultText)
+fileNameBox.bind("<Button-1>", Window.clear_Text)
+fileNameBox.place(x = 210, y = 550)
+
+fileList = []
+
+
+#w = Label(root, text=filesText)
+frame = Frame(root)
+scrollbar = Scrollbar(root, orient = VERTICAL)
+
+w = Listbox(root, yscrollcommand =scrollbar.set, selectmode= MULTIPLE)
+scrollbar.config(command =w.yview)
+
+
+#w.config(text = filesText)
+
+#Place Buttons and label
+scrollbar.place(x = 500, y = 50, width = 20, height = 400)
+w.place(x = 150, y = 50, width = 350, height =400)
+
+selectButton.place(x = 90, y = 600, width = 120, height =25)
+printButton.place(x = 210,y=600, width = 120, height =25)
+clearLastButton.place(x = 330,y=600, width = 120, height =25)
+clearAllButton.place(x = 450, y =600, width = 120, height =25)
+upButton.place(x = 550, y =200, width = 20, height = 20)
+DownButton.place(x = 550, y =300, width = 20, height = 20)
+root.mainloop()
+
