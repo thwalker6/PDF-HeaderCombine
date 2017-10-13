@@ -1,65 +1,94 @@
+from PyPDF2 import PdfFileMerger, PdfFileReader
 from fpdf import FPDF
-from PyPDF2 import PdfFileReader
 import PyPDF2
-from pprint import pprint
 import os
-import csv
 
 class PDF(FPDF):
 
     def header(self):
+        font_size = 8
         
-        self.set_font('Arial', '', 10)
+        
 
-        #get width of PDF
-        w_pt = {}
+        self.set_font('Arial', '', font_size)
+        #get dimensions and orientation of PDF
         w_pt = self.pages[self.page_no()]['w_pt']
-        
+        h_pt = self.pages[self.page_no()]['h_pt']
+        ori = self.getOrientation(w_pt, h_pt)
+
         #determine placement of header 
-        cellR = w_pt-(w_pt/6)
-        self.cell(cellR)
 
-
-        self.cell(0, 10, page_traits().get_title().title(), 0, 0, 'L')
-        self.ln(10)
+        cellR = self.placement(self.page_no, w_pt, ori)
         self.cell(cellR)
-        fName = page_traits().get_link()
-        #only include sheet number if it has more than one page
-        print (fName)
-        if 'memo' not in fName.lower() and 'toc' not in fName.lower():
-            if PdfFileReader(open(fName, 'rb')).getNumPages() > 1 :
-                self.cell(0, 10, 'Sheet %s' %self.page_added  , 0, 1, 'L')
+        fName = self.pg_Name
+        #only include sheet number if it has more than one page not TOC or memo
+        if 'memo' not in fName.lower() and 'toc' not in fName.lower() and 'rename' not in fName.lower():
+
+            self.cell(0, font_size, fName.title(), 0, 0, 'L')
+            #add sheet number if needed
+            if self.mx_Page > 1 :
+                self.ln(font_size)
+                self.cell(cellR)
+                self.cell(0, font_size, 'Sheet %s' %self.page_added  , 0, 0, 'L')
+                                
     def footer(self):
+        #sets to bottom and get dimensions
         self.set_y(-15)
-        w_pt = {}
         w_pt = self.pages[self.page_no()]['w_pt']
-        cellR=w_pt-(w_pt/6)
+        h_pt = self.pages[self.page_no()]['h_pt']
+        ori = self.getOrientation(w_pt, h_pt)
+        cellR = self.placement(self.page_no, w_pt, ori)
         self.cell(cellR)
         
-        # set the font, I=italic
+
         self.set_font("Arial", "", size=8)
  
         # display the page number and center it
-        pageNum = "%s" % self.page_no()
-        self.cell(0, 10, pageNum, align="C")
+        pageNum = "Page %s" % self.page_no()
+        self.cell(0, 10, pageNum, 0,1, align="L")
         
+    def placement(self, page_no, w_pt, ori):
+        #if page is landscape or on even pages placement of words changes a bit
+        if page_no() % 2 == 1 and ori == "P":
+            cellR = w_pt-(w_pt/6)
+        else:
+            cellR = w_pt-(w_pt/6)
+            #cellR = (w_pt/12)
+        return cellR
         
-        
+    def getOrientation(self,w_pt, h_pt):
+        if h_pt >= w_pt:
+            return "P"
+        else:
+            return "L"
+    
+
+def tempFolder():
+    directory = 'C:\\Temp'
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    return(directory)
 class page_traits():
     
-    def get_link(self):
-        return 'C:\\Users\\u41007\\Desktop\\python\\Exhibit 10-C fdfd.pdf'
+
+    def get_title(pdf_Name):
         
-    def get_title(self):
-        pdf_Name = page_traits().get_link()
         x = 0
         z = 7
-        if 'toc' in pdf_Name.lower() or 'memo' in pdf_Name.lower():
-            return ""
+        #returns memo if it is memo or TOC since they aren't needed
+        if 'toc' in pdf_Name.lower():
+            return 'TOC'
+        elif 'memo' in pdf_Name.lower() or pdf_Name == '':
+            return "Memo"
+        elif 'exhibit' not in pdf_Name.lower():
+            return "Does not have exhibit in the name.  Please rename"
+        #finds the word exhibit 
         while x <= len(pdf_Name) and pdf_Name[x:z+x] != 'Exhibit':
             x= x+1
 
         try: 
+            #convuluted way of finding the end of the exhibit number stuff
+            #will checks to find numbers in there
             if pdf_Name[x:z+x+3:][-1] != '-':
                 int(pdf_Name[x:z+x+3:][-1])
                 y = x+3
@@ -72,18 +101,22 @@ class page_traits():
             
         return pdf_Name[x:z+y]
 
-    def total_pages(self, input1):
-        return input1.getNumPages()
+    def total_pages(pdfFile):
+        #total pages a-doy
+        return pdfFile.getNumPages()
     
-    def get_dimensions(self, input1):
-        page_dimensions = {}
+    def get_traits(pdfFile, pdf =''):
+        #gets dimensions and orientation and exhibit name page numbers etc.
+        page_d = {}
         pages =[]
-        pageNum = page_traits().total_pages(input1)
-        print(pageNum)
-        for x in range(pageNum):
-            box1=(input1.getPage(x).mediaBox)
-            
-            
+
+        pageNum = page_traits.total_pages(pdfFile)
+
+        for x in range( pageNum):
+            #box1 has all the characteristics of the PDF
+            box1=(pdfFile.getPage(x).mediaBox)
+
+            #finds out orientation
             if box1[2] >= box1[3]:
                 x_co= int(box1[2])
                 y_co = int(box1[3])
@@ -92,59 +125,93 @@ class page_traits():
                 x_co = int(box1[3])
                 y_co = int(box1[2])
                 ori= 'L'
-            page_dimensions = {'page':x, 'x': x_co, 'y': y_co, 'o': ori}
-            pages.append(page_dimensions)
+            
+            pgCount = page_traits.total_pages(pdfFile)
+            exName = page_traits.get_title(pdf)
+            page_d = {'page':x+1, 'x': x_co, 'y': y_co, 'o': ori, 'pg_Count': pgCount, 'exName': exName}
+            pages.append(page_d)
+
         return pages
     
 
-#output
-class Out_The_PDF():
-    def out_file_names(self):
-        overlay = 'C:\\Users\\u41007\\Desktop\\python\\overlay.pdf'
-        oFileName = 'C:\\Users\\u41007\\Desktop\\python\\CAU Package.pdf'
-        return (overlay, oFileName)
-    def remove_overlay(self, overlay):
-        os.remove(overlay)
+
+class Run_This():
+
+    def __init__(self, listN, destination, package_name):
+        self.listN = listN
+        self.destination = destination
+        self.package_name = package_name
+    
+    def run_prog(self):
+        merger = PdfFileMerger()
+        tempDirectory = tempFolder()
+        exhibitNames = []
+        page_dimensions = []
+        page_count = []
+        #list of files to be combined
+        
+        pdfs = self.listN
+
+        #merges the PDFs together
+        for pdfz in pdfs:
+            input1 = PdfFileReader(open(pdfz , 'rb'))
+            page_dimensions.append(page_traits.get_traits(input1, pdfz))
+
+            merger.append(open(pdfz, 'rb'))
+
+        #gets characteristics fo the PDFS, stores them in list/dictionaries
+        allPageChar = []
+        for x in range(len(page_dimensions)):
+            for y in range(len(page_dimensions[x])):
+                allPageChar.append(page_dimensions[x][y])
 
 
 
-file_name = 'C:\\Users\\u41007\\Desktop\\python\\input.csv'
-mycsv = csv.reader(open(file_name))
-for row in mycsv:
-    print(row)
+        #finishes the merge
+        with open(tempDirectory +'\\result.pdf', 'wb') as fout:
+            merger.write(fout)
+
+        input2 = PdfFileReader(open(tempDirectory +'\\result.pdf', 'rb'))
+
+        #starts the blank pages for headers
+
+        pdf = PDF('L', 'pt', (page_dimensions[0][0]['x'],page_dimensions[0][0]['y']))
+ 
+
+        pages=[]
+        exName = []
+
+        #applies all the pages characteristics to the pages list
+        for x in range(len(allPageChar)):
+            pages.append(allPageChar[x])
 
 
+        for x in range(len(allPageChar)):
+            #Modified the add_page to allow page added for page number of sheet
 
-    oPDF = Out_The_PDF().out_file_names()[0]
-   
-    input1 = PdfFileReader(open(page_traits().get_link(), 'rb'))
+            pdf.add_page(orientation=pages[x]['o'], format=(pages[x]['x'], pages[x]['y']), same = False, page_added = pages[x]['page'], pg_Name = pages[x]['exName'], mx_Page = pages[x]['pg_Count'])
+        #header file name
+        oPDF = tempDirectory +'\\overlay.pdf'
 
-    pages=[]
-    pages = page_traits().get_dimensions(input1)
-
-    pdf = PDF('L', 'pt', (pages[0]['x'],pages[0]['y']))
-
-    '''add blank pages to overlay'''
-    for x in range(input1.getNumPages()):
-        #Modified the add_page to allow page added for page number of sheet
-        pdf.add_page(orientation=pages[x]['o'], format=(pages[x]['x'], pages[x]['y']), same = False, page_added = x+1)
-    pdf.output(oPDF, 'F')
+        pdf.output(oPDF, 'F')
 
 
-    '''Merge the pages '''
-    pdfFirst = input1.getPage(0)
-    headers = PyPDF2.PdfFileReader(open(oPDF, 'rb'))
-    pdfWriter = PyPDF2.PdfFileWriter()
-    pdfFirst.mergePage(headers.getPage(0))
-    pdfWriter.addPage(pdfFirst)
-
-    for pageNum in range(1, input1.numPages):
-        pageObj = input1.getPage(pageNum)
-        pageObj.mergePage(headers.getPage(pageNum))
-        pdfWriter.addPage(pageObj)
+        pdfFirst = input2.getPage(0)
+        headers = PyPDF2.PdfFileReader(open(oPDF, 'rb'))
+        pdfWriter = PyPDF2.PdfFileWriter()
+        pdfFirst.mergePage(headers.getPage(0))
+        pdfWriter.addPage(pdfFirst)
 
 
-    resultPdfFile = open(Out_The_PDF().out_file_names()[1], 'wb')
-    pdfWriter.write(resultPdfFile)
-    resultPdfFile.close()
+        for pageNum in range(1, input2.numPages):
+
+            pageObj = input2.getPage(pageNum)
+            pageObj.mergePage(headers.getPage(pageNum))
+            pdfWriter.addPage(pageObj)
+
+        address = self.destination + '\\' + self.package_name + '.pdf'
+        resultPdfFile = open(address, 'wb')
+        pdfWriter.write(resultPdfFile)
+        resultPdfFile.close()
+        os.startfile(address)
 
