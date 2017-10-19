@@ -1,8 +1,8 @@
 from tkinter import *
 from tkinter.filedialog import askopenfilename, askopenfilenames
-from tkinter import filedialog
-from tkinter import messagebox
+from tkinter import filedialog, messagebox
 from findPDF import Run_This, page_traits
+from os import path
 
 class Window(Frame):
     
@@ -29,7 +29,7 @@ class Window(Frame):
 
     def about_Maker():
         #about the tool
-        messagebox.showinfo("About", "Made by me for me.")
+        messagebox.showinfo("About", "The CAU exhibit Combiner was made \n by Thomas Walker.  If you come accross \n any issues please email Thomas Walker \n at Thowalker@geico.com. \n \n Hope you enjoy!")
     
     def select_file():
         #select the PDFS you want
@@ -46,24 +46,7 @@ class Window(Frame):
             #w.config(text = fileString(fileList))
             Window.list_repop(fileList)
         filename = ''    
-    def reorder(fileList):
-        orderList =[]
-        del orderList[:]
-        #a really stupid and convulated way to auto order
-        for x in range(len(fileList)):
-            if 'memo' in fileList[x].lower():
-                orderList.append(0)
-            elif 'toc' in fileList[x].lower():
-                orderList.append(1)
-            elif x == 0:
-                orderList.append(2)
-            elif x ==1:
-                if orderList[0] ==2:
-                    orderList.append(3)
-            else:
-                orderList.append(x)
 
-        return fileList
         
     def list_repop(fileList):
         for x in fileList:
@@ -71,7 +54,7 @@ class Window(Frame):
             
     def select_dest(self):
         #gets destination to save files
-        destination = filedialog.askdirectory(title ="Select file")
+        destination = filedialog.askdirectory(title ="Select file",filetypes = [("PDF files", ".pdf")])
         
     def clear_list():
         #clears out all files on the list to print
@@ -106,13 +89,15 @@ class Window(Frame):
         destination = filedialog.askdirectory(title ="Select Save Location")
         return destination
         
+    def get_File_Name(self):
+        path.basename(self)
+        
     def print_list():
         #Combines the PDFS with a popup
         arr = Window.fileString(fileList)
         
         #pull package name
         packageName = Window.package_name(fileNameBox)
-        
         #Check to see if any files are selected
         if len(fileList) > 0:
             arr = arr + 'OK to print?'
@@ -121,9 +106,27 @@ class Window(Frame):
                 #select where to save
                 destination = Window.select_dest()
                 #run program
+                #a = Run_This(fileList, destination, packageName)
 
-                a = Run_This(fileList, destination, packageName)
-                a.run_prog()
+                pacType = selPackage.get()
+                if pacType == "Filing":
+                    for x in fileList:
+                        try:
+                            packageList = path.basename(x)[:-4]
+                            a = Run_This(x, destination, packageList, "Filing")
+                            a.run_prog()
+                        except:
+                            packageList = path.basename(x)[:-4]
+                            a = Run_This(x, destination, packageList, "Filing")
+                            a.run_prog()
+                else:
+                    a = Run_This(fileList, destination, packageName, "CAU")
+                    try:
+                        a.run_prog()
+                    except:
+                        #when file is converte
+                        a = Run_This(fileList, destination, packageName,"CAU")
+                        a.run_prog()
                 messagebox.showinfo("Finished", "File is done")
             else:
                 messagebox.showinfo("Not run", "Please make the changes you need")
@@ -134,8 +137,9 @@ class Window(Frame):
         #Check to see if they named their package
         packageName= fileNameBox.get()
         if packageName == defaultText:
-            package_name = "CAU Package"
-        
+            packageName = "Package"
+        elif packageName == '':
+            packageName = "Package"
         return packageName
         
     def clear_Text(event):
@@ -195,12 +199,20 @@ selectButton = Button(root, text = "Select File(s)", command = Window.select_fil
 clearLastButton = Button(root, text = "Remove Selected File(s)", command = Window.clear_item)
 clearAllButton = Button(root, text="Start over", command = Window.clear_list)
 
+selPackage = StringVar(None, "CAU")
+
+Label(root, text = "Choose Package Type:").place(x= 90, y = 500, width = 110, height = 15)
+
+Radiobutton(root, text = "CAU", variable = selPackage, value = 'CAU').place(x= 250, y = 500, width = 50, height = 15)
+Radiobutton(root, text = "Filing", variable = selPackage, value = 'Filing').place(x= 300, y = 500, width = 50, height = 15)
+Radiobutton(root, text = "Other", variable = selPackage, value = 'Other').place(x= 350, y = 500, width = 50, height = 15)
+
 
 
 upButton = Button(root, font=("Wingdings 3", 10),text = "p", command = Window.move_Item_Up)
 DownButton = Button(root, font=("Wingdings 3", 10), text = "q", command = Window.move_Item_Down)
 
-printButton = Button(root, text="Combine PDF's", command = Window.print_list)
+printButton = Button(root, text="Format PDF's", command = Window.print_list)
 defaultText = "Insert File Name Here"
 
 fileNameBox = Entry(root, width = 40)
@@ -208,6 +220,7 @@ fileNameBox.insert(0, defaultText)
 fileNameBox.bind("<Button-1>", Window.clear_Text)
 fileNameBox.place(x = 210, y = 550)
 
+caveLabel = Label(root, font=('Arial', 10, 'bold italic'), text = 'So easy an assoicate can do it!')
 fileList = []
 
 
@@ -218,6 +231,10 @@ scrollbar = Scrollbar(root, orient = VERTICAL)
 w = Listbox(root, yscrollcommand =scrollbar.set, selectmode= MULTIPLE)
 scrollbar.config(command =w.yview)
 
+ibox1 = Label(root, font=("Arial", 8), text = 'Instructions' , wraplength = 100, anchor="c")
+ibox2 = Label(root, font=("Arial", 8), text = '1) Click Select Files' , wraplength = 100, anchor="w")
+ibox3 = Label(root, font=("Arial", 8), text = '2) Enter File Name' , wraplength = 100, anchor="w")
+ibox4 = Label(root, font=("Arial", 8), text = "3) Click Combine PDF's" , wraplength = 100, anchor="w")
 
 #w.config(text = filesText)
 
@@ -225,11 +242,17 @@ scrollbar.config(command =w.yview)
 scrollbar.place(x = 500, y = 50, width = 20, height = 400)
 w.place(x = 150, y = 50, width = 350, height =400)
 
+ibox1.place(x = 20, y = 100, width =100, height = 30)
+ibox2.place(x = 20, y = 140, width =100, height = 30)
+ibox3.place(x = 20, y = 180, width =100, height = 30)
+ibox4.place(x = 20, y = 220, width =100, height = 30)
+
+caveLabel.place(x = 190, y = 10, width = 300, height = 50)
 selectButton.place(x = 90, y = 600, width = 120, height =25)
 printButton.place(x = 210,y=600, width = 120, height =25)
 clearLastButton.place(x = 330,y=600, width = 120, height =25)
 clearAllButton.place(x = 450, y =600, width = 120, height =25)
 upButton.place(x = 550, y =200, width = 20, height = 20)
+
 DownButton.place(x = 550, y =300, width = 20, height = 20)
 root.mainloop()
-
